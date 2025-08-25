@@ -47,3 +47,6 @@ TAGS
 cscope.*
 ncscope.*
 *cscope*
+
+# sandbox
+sandbox/
