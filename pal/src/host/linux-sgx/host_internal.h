@@ -31,6 +31,12 @@ extern bool g_vtune_profile_enabled;
 #define ALLOC_ALIGN_DOWN(addr)     ALIGN_DOWN_POW2(addr, g_page_size)
 #define ALLOC_ALIGN_DOWN_PTR(addr) ALIGN_DOWN_PTR_POW2(addr, g_page_size)
 
+struct enclave_region {
+    unsigned long baseaddr;
+    unsigned long size;
+    int           node_id;
+};
+
 struct pal_enclave {
     /* attributes */
     bool is_first_process; // Initial process in Gramine instance is special.
@@ -39,6 +45,10 @@ struct pal_enclave {
     char* raw_manifest_data;
     unsigned long baseaddr;
     unsigned long size;
+
+    int regions_size;
+    struct enclave_region** regions;
+
     unsigned long thread_num;
     unsigned long rpc_thread_num;
     unsigned long ssa_frame_size;
@@ -185,3 +195,11 @@ int pd_event_sample_simple(struct perf_data* pd, uint64_t ip, uint32_t pid, uint
 /* Write PERF_RECORD_SAMPLE (with stack sample, at most PD_STACK_SIZE bytes) */
 int pd_event_sample_stack(struct perf_data* pd,  uint64_t ip, uint32_t pid, uint32_t tid,
                           uint64_t period, sgx_pal_gpr_t* gpr, void* stack, size_t stack_size);
+
+static int parse_node_index(const char* path);
+static int enumerate_nodes_sysfs(int** out_node_ids, int* out_count);
+#ifdef HAVE_LIBNUMA
+static int enumerate_nodes_numa(int** out_node_ids, int* out_count);
+#endif
+int init_enclave_regions(struct pal_enclave* pe);
+void destroy_enclave_regions(struct pal_enclave* pe);
