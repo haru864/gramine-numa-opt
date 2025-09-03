@@ -27,7 +27,7 @@ static int parse_node_index(const char* path) {
     return -1;
 }
 
-static int enumerate_nodes_sysfs(int** out_node_ids, int* out_count) {
+static int enumerate_nodes_sysfs(int** node_ids, int* node_count) {
     glob_t g = {0};
     int ret  = glob("/sys/devices/system/node/node*", 0, NULL, &g);
     if (ret != 0) {
@@ -66,8 +66,8 @@ static int enumerate_nodes_sysfs(int** out_node_ids, int* out_count) {
         }
     }
 
-    *out_node_ids = ids;
-    *out_count    = n;
+    *node_ids   = ids;
+    *node_count = n;
     return 0;
 }
 
@@ -109,7 +109,7 @@ static int enumerate_nodes_numa(int** out_node_ids, int* out_count) {
 }
 #endif
 
-int init_enclave_regions(struct pal_enclave* pe) {
+int init_enclave_regions(char* manifest, struct pal_enclave* pe) {
     if (!pe)
         return -EINVAL;
 
@@ -130,21 +130,17 @@ int init_enclave_regions(struct pal_enclave* pe) {
         }
     }
 
-    // pal_enclave->regions_size 設定
     pe->regions_size = nnodes;
 
-    // 配列（ポインタ配列）確保
     pe->regions = calloc((size_t)pe->regions_size, sizeof(struct enclave_region*));
     if (!pe->regions) {
         free(node_ids);
         return -ENOMEM;
     }
 
-    // 各要素を確保＆初期化
     for (int i = 0; i < pe->regions_size; i++) {
         pe->regions[i] = calloc(1, sizeof(struct enclave_region));
         if (!pe->regions[i]) {
-            // 片付け
             for (int k = 0; k < i; k++) free(pe->regions[k]);
             free(pe->regions);
             pe->regions      = NULL;
@@ -153,8 +149,8 @@ int init_enclave_regions(struct pal_enclave* pe) {
             return -ENOMEM;
         }
         pe->regions[i]->node_id  = node_ids[i];
-        pe->regions[i]->baseaddr = 0;  // まだ未決定なら 0 初期化
-        pe->regions[i]->size     = 0;  // 同上
+        pe->regions[i]->baseaddr = DEFAULT_ENCLAVE_BASE;
+        pe->regions[i]->size     = 0;  // FIX
     }
 
     free(node_ids);
